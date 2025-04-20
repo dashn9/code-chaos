@@ -16,10 +16,16 @@ var ValidTypes = map[string]bool{
 	"bool":   true,
 }
 
-// TypeValue represents a parsed expression that can be either a variable declaration
+// FuncArg represents a function argument with its type and value
+type FuncArg struct {
+	Type  string
+	Value string
+}
+
+// Variable represents a parsed expression that can be either a variable declaration
 // or a function call. The structure holds all necessary information to process
 // the expression further.
-type TypeValue struct {
+type Variable struct {
 	// Name is the identifier for variables or function name
 	Name string
 	// Type represents the data type for variables or parameter types for functions
@@ -28,8 +34,8 @@ type TypeValue struct {
 	Value string
 	// IsFunc indicates whether this is a function call (true) or variable declaration (false)
 	IsFunc bool
-	// FuncArgs holds the arguments for function calls
-	FuncArgs []string
+	// FuncArgs holds the arguments for function calls with their types
+	FuncArgs []FuncArg
 }
 
 // Regex patterns for parsing different expressions
@@ -38,22 +44,26 @@ var (
 	// Example: x(int):42, price(float):19.99, name(string):John
 	varPattern = regexp.MustCompile(`^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(\w+)\s*\)\s*:\s*(.+)$`)
 
-	// funcPattern matches function calls: func(type1,type2):value
-	// Example: rng(int,int):random, max(float,float):100.5
-	funcPattern = regexp.MustCompile(`^([a-zA-Z]{3,4})\s*\(\s*([^)]+)\s*\)\s*:\s*(.+)$`)
+	// funcPattern matches function calls: value(type):func(value1(type1),value2(type2))
+	// Example: random(string):rng(42(int),100(int)), 100.5(float):max(19.99(float),100.5(float))
+	funcPattern = regexp.MustCompile(`^([^(]+)\s*\(\s*(\w+)\s*\)\s*:\s*([a-zA-Z]{3,4})\s*\(\s*([^)]+)\s*\)$`)
+
+	// argPattern matches function arguments: value(type)
+	// Example: 42(int), 19.99(float), "hello"(string), true(bool)
+	argPattern = regexp.MustCompile(`^([^(]+)\s*\(\s*(\w+)\s*\)$`)
 )
 
-// ParseTypeValue parses a string expression and returns a TypeValue struct.
+// ParseVariable parses a string expression and returns a Variable struct.
 // The input can be either:
 //  1. Variable declaration: name(type):value
 //     Example: x(int):42
-//  2. Function call: func(type1,type2):value
-//     Example: rng(int,int):random
+//  2. Function call: value(type):func(value1(type1),value2(type2))
+//     Example: random(string):rng(42(int),100(int))
 //
 // Returns:
-// - *TypeValue: The parsed expression
+// - *Variable: The parsed expression
 // - error: Any parsing errors that occurred
-func ParseTypeValue(input string) (*TypeValue, error) {
+func ParseVariable(input string) (*Variable, error) {
 	if input == "" {
 		return nil, errors.New("input is empty")
 	}
@@ -74,7 +84,7 @@ func ParseTypeValue(input string) (*TypeValue, error) {
 // parseVariableMatch processes a variable declaration match.
 // Expected format: name(type):value
 // Example: x(int):42
-func parseVariableMatch(matches []string) (*TypeValue, error) {
+func parseVariableMatch(matches []string) (*Variable, error) {
 	if len(matches) != 4 {
 		return nil, errors.New("invalid variable match")
 	}
@@ -93,7 +103,7 @@ func parseVariableMatch(matches []string) (*TypeValue, error) {
 		return nil, err
 	}
 
-	return &TypeValue{
+	return &Variable{
 		Name:   name,
 		Type:   typeStr,
 		Value:  value,
@@ -102,37 +112,83 @@ func parseVariableMatch(matches []string) (*TypeValue, error) {
 }
 
 // parseFunctionMatch processes a function call match.
-// Expected format: func(type1,type2):value
-// Example: rng(int,int):random
-func parseFunctionMatch(matches []string) (*TypeValue, error) {
-	if len(matches) != 4 {
+// Expected format: value(type):func(value1(type1),value2(type2))
+// Example: random(string):rng(42(int),100(int))
+//
+// The function validates:
+// - Function name length (must be 3-4 letters)
+// - Argument format (value(type))
+// - Argument types (must be valid types: int, float, string, bool)
+// - Argument values (must be valid for their types)
+// - Return value type (must be a valid type)
+//
+// Returns a Variable struct with:
+// - Name: function name (3-4 letters)
+// - Type: return value type
+// - Value: function return value
+// - IsFunc: true
+// - FuncArgs: slice of FuncArg structs containing type and value information
+func parseFunctionMatch(matches []string) (*Variable, error) {
+	if len(matches) != 5 {
 		return nil, errors.New("invalid function match")
 	}
 
-	name := matches[1]
-	typeStr := matches[2]
-	value := matches[3]
+	value := strings.TrimSpace(matches[1])
+	returnType := strings.TrimSpace(matches[2])
+	name := matches[3]
+	argsStr := matches[4]
+
+	// Validate return type
+	if !ValidTypes[returnType] {
+		return nil, fmt.Errorf("unsupported return type: %s. Valid types are: int, float, string, bool", returnType)
+	}
+
+	// Validate return value
+	if err := validateValue(value, returnType); err != nil {
+		return nil, fmt.Errorf("invalid return value: %w", err)
+	}
 
 	// Validate function name length (3-4 letters)
 	if len(name) < 3 || len(name) > 4 {
 		return nil, fmt.Errorf("function name must be 3-4 letters long: %s", name)
 	}
 
-	// Split and validate argument types
-	argTypes := strings.Split(typeStr, ",")
-	for _, argType := range argTypes {
-		argType = strings.TrimSpace(argType)
+	// Split and validate arguments
+	argStrings := strings.Split(argsStr, ",")
+	funcArgs := make([]FuncArg, 0, len(argStrings))
+
+	for _, argStr := range argStrings {
+		argStr = strings.TrimSpace(argStr)
+		argMatches := argPattern.FindStringSubmatch(argStr)
+		if argMatches == nil {
+			return nil, fmt.Errorf("invalid argument format: %s. Expected value(type)", argStr)
+		}
+
+		argValue := strings.TrimSpace(argMatches[1])
+		argType := strings.TrimSpace(argMatches[2])
+
+		// Validate the type
 		if !ValidTypes[argType] {
 			return nil, fmt.Errorf("unsupported argument type: %s. Valid types are: int, float, string, bool", argType)
 		}
+
+		// Validate the value against the type
+		if err := validateValue(argValue, argType); err != nil {
+			return nil, fmt.Errorf("invalid argument value: %w", err)
+		}
+
+		funcArgs = append(funcArgs, FuncArg{
+			Type:  argType,
+			Value: argValue,
+		})
 	}
 
-	return &TypeValue{
+	return &Variable{
 		Name:     name,
-		Type:     typeStr,
+		Type:     returnType,
 		Value:    value,
 		IsFunc:   true,
-		FuncArgs: argTypes,
+		FuncArgs: funcArgs,
 	}, nil
 }
 
