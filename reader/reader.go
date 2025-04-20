@@ -2,14 +2,14 @@ package reader
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/Ishogbon/code-chaos/schema"
 	"gopkg.in/yaml.v2"
 )
 
 func LoadTestFromYAML(filePath string) (*schema.Test, error) {
-	yamlData, err := ioutil.ReadFile(filePath)
+	yamlData, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read YAML file: %w", err)
 	}
