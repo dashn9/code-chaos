@@ -18,7 +18,7 @@ var ValidTypes = map[string]bool{
 
 // FuncArg represents a function argument with its type and value
 type FuncArg struct {
-	Type  string
+	Type  *string // Nullable type field to handle variable references
 	Value string
 }
 
@@ -48,9 +48,9 @@ var (
 	// Example: random(string):rng(42(int),100(int)), 100.5(float):max(19.99(float),100.5(float))
 	funcPattern = regexp.MustCompile(`^([^(]+)\s*\(\s*(\w+)\s*\)\s*:\s*([a-zA-Z]{3,4})\s*\(\s*([^)]+)\s*\)$`)
 
-	// argPattern matches function arguments: value(type)
-	// Example: 42(int), 19.99(float), "hello"(string), true(bool)
-	argPattern = regexp.MustCompile(`^([^(]+)\s*\(\s*(\w+)\s*\)$`)
+	// argPattern matches function arguments: value(type) or variable reference
+	// Example: 42(int), 19.99(float), "hello"(string), true(bool), myVar
+	argPattern = regexp.MustCompile(`^([^(]+)(?:\s*\(\s*(\w+)\s*\))?$`)
 )
 
 // ParseVariable parses a string expression and returns a Variable struct.
@@ -117,7 +117,7 @@ func parseVariableMatch(matches []string) (*Variable, error) {
 //
 // The function validates:
 // - Function name length (must be 3-4 letters)
-// - Argument format (value(type))
+// - Argument format (value(type) or variable reference value())
 // - Argument types (must be valid types: int, float, string, bool)
 // - Argument values (must be valid for their types)
 // - Return value type (must be a valid type)
@@ -161,10 +161,22 @@ func parseFunctionMatch(matches []string) (*Variable, error) {
 		argStr = strings.TrimSpace(argStr)
 		argMatches := argPattern.FindStringSubmatch(argStr)
 		if argMatches == nil {
-			return nil, fmt.Errorf("invalid argument format: %s. Expected value(type)", argStr)
+			return nil, fmt.Errorf("invalid argument format: %s", argStr)
 		}
 
 		argValue := strings.TrimSpace(argMatches[1])
+
+		// Check if this is a variable reference (no type specified)
+		if len(argMatches) == 2 || argMatches[2] == "" {
+			// This is a variable reference
+			funcArgs = append(funcArgs, FuncArg{
+				Type:  nil, // Type is nil for variable references
+				Value: argValue,
+			})
+			continue
+		}
+
+		// This is a direct value with type
 		argType := strings.TrimSpace(argMatches[2])
 
 		// Validate the type
@@ -177,8 +189,10 @@ func parseFunctionMatch(matches []string) (*Variable, error) {
 			return nil, fmt.Errorf("invalid argument value: %w", err)
 		}
 
+		// Create a pointer to the type string
+		typePtr := &argType
 		funcArgs = append(funcArgs, FuncArg{
-			Type:  argType,
+			Type:  typePtr,
 			Value: argValue,
 		})
 	}
