@@ -52,12 +52,21 @@ type Test struct {
 	ExpectedResults    []ExpectedResult `yaml:"expected_results"`
 }
 
+// Generate represents a generation configuration
+type Generate struct {
+	ID        int      `yaml:"id"`
+	Count     int      `yaml:"count"`
+	Variables []string `yaml:"variables"`
+	Action    int      `yaml:"action"`
+}
+
 // TestFile represents the complete test file structure
 type TestFile struct {
-	Globals []Global         `yaml:"globals"`
-	Results []ExpectedResult `yaml:"results"`
-	Actions []Action         `yaml:"actions"`
-	Tests   []Test           `yaml:"tests"`
+	Globals   []Global         `yaml:"globals"`
+	Results   []ExpectedResult `yaml:"results"`
+	Actions   []Action         `yaml:"actions"`
+	Generates []Generate       `yaml:"generates"`
+	Tests     []Test           `yaml:"tests"`
 }
 
 // Global represents global variables and settings

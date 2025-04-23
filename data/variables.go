@@ -1,15 +1,15 @@
-package main
+package data
 
 import "github.com/Ishogbon/code-chaos/parser"
 
 type testVariables struct {
 	variables []parser.Variable
-	actionId  int
+	id        int
 }
 
 type generateVariables struct {
 	variables []parser.Variable
-	actionId  int
+	id        int
 }
 
 type Variables struct {
@@ -17,10 +17,10 @@ type Variables struct {
 	generateVariables []generateVariables
 }
 
-func (v *Variables) AddGenerateVariables(actionId int, variables []parser.Variable) {
-	// Check if an generateVariable with the given actionId already exists
-	for i, av := range v.testVariables {
-		if av.actionId == actionId {
+func (v *Variables) AddGenerateVariables(id int, variables []parser.Variable) {
+	// Check if a generateVariable with the given id already exists
+	for i, av := range v.generateVariables {
+		if av.id == id {
 			// Extend the existing variables
 			v.generateVariables[i].variables = append(v.generateVariables[i].variables, variables...)
 			return
@@ -29,15 +29,15 @@ func (v *Variables) AddGenerateVariables(actionId int, variables []parser.Variab
 
 	// If no existing generateVariable found, create a new one
 	v.generateVariables = append(v.generateVariables, generateVariables{
-		actionId:  actionId,
+		id:        id,
 		variables: variables,
 	})
 }
 
-func (v *Variables) AddActionVariables(actionId int, variables []parser.Variable) {
-	// Check if an actionVariable with the given actionId already exists
+func (v *Variables) AddTestVariables(id int, variables []parser.Variable) {
+	// Check if an actionVariable with the given id already exists
 	for i, av := range v.testVariables {
-		if av.actionId == actionId {
+		if av.id == id {
 			// Extend the existing variables
 			v.testVariables[i].variables = append(v.testVariables[i].variables, variables...)
 			return
@@ -46,19 +46,25 @@ func (v *Variables) AddActionVariables(actionId int, variables []parser.Variable
 
 	// If no existing actionVariable found, create a new one
 	v.testVariables = append(v.testVariables, testVariables{
-		actionId:  actionId,
+		id:        id,
 		variables: variables,
 	})
 }
 
 var StoredVariables Variables
 
-func parseVariables(input []string) {
+func StoreVariables(id int, input []string, variableType string) {
 	for _, variable := range input {
 		v, err := parser.ParseVariable(variable)
 		if err != nil {
 			panic(err)
 		}
-		StoredVariables.AddActionVariables(0, []parser.Variable{*v})
+		if variableType == "test" {
+			StoredVariables.AddTestVariables(id, []parser.Variable{*v})
+		} else if variableType == "generate" {
+			StoredVariables.AddGenerateVariables(id, []parser.Variable{*v})
+		} else {
+			panic("Invalid variable type")
+		}
 	}
 }

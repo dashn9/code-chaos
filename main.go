@@ -28,6 +28,8 @@ func main() {
 		log.Fatalf("Failed to load test file: %v", err)
 	}
 
+	tester.Generate(testFile.Generates)
+
 	// Process each test
 	for i, test := range testFile.Tests {
 		fmt.Printf("Running test %d (ID: %d)...\n", i+1, test.ID)
