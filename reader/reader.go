@@ -23,24 +23,3 @@ func LoadTestFromYAML(filePath string) (*schema.TestFile, error) {
 
 	return &testFile, nil
 }
-
-// LoadCodeChaosProceduresYAML is deprecated, use LoadTestFromYAML instead
-func LoadCodeChaosProceduresYAML(filePath string) (*schema.Test, error) {
-	testFile, err := LoadTestFromYAML(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	// For backward compatibility, return the first test
-	if len(testFile.Tests) == 0 {
-		return nil, fmt.Errorf("no tests found in the YAML file")
-	}
-
-	return &testFile.Tests[0], nil
-}
-
-// ProcessTest processes a test and returns the result
-func ProcessTest(test *schema.Test) error {
-	// TODO: Implement test processing logic
-	return nil
-}

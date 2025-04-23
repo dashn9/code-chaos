@@ -20,7 +20,7 @@ func ExecuteAction(action *schema.Action) (string, error) {
 	case "endpoint":
 		return executeEndpointAction(action)
 	case "broker:rmq":
-		return executeBrokerAction(action)
+		return executeRmqBrokerAction(action)
 	default:
 		return "", fmt.Errorf("unsupported action type: %s", action.Type)
 	}
@@ -28,12 +28,12 @@ func ExecuteAction(action *schema.Action) (string, error) {
 
 // executeEndpointAction executes an HTTP endpoint action
 func executeEndpointAction(action *schema.Action) (string, error) {
-	// TODO: Implement HTTP endpoint action execution
+
 	return "", nil
 }
 
-// executeBrokerAction executes a message broker action
-func executeBrokerAction(action *schema.Action) (string, error) {
+// executeRmqBrokerAction executes a message broker action
+func executeRmqBrokerAction(action *schema.Action) (string, error) {
 	// TODO: Implement message broker action execution
 	return "", nil
 }
