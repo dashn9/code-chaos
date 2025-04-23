@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Ishogbon/code-chaos/procedures"
 	"github.com/Ishogbon/code-chaos/reader"
 	"github.com/Ishogbon/code-chaos/schema"
 	"github.com/Ishogbon/code-chaos/tester"
@@ -27,6 +28,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load test file: %v", err)
 	}
+
+	procedures.StoreActions(testFile.Actions)
 
 	tester.Generate(testFile.Generates)
 
