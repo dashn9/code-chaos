@@ -12,13 +12,23 @@ type Variables struct {
 }
 
 func (v *Variables) AddActionVariables(actionId int, variables []parser.Variable) {
+	// Check if an actionVariable with the given actionId already exists
+	for i, av := range v.Variables {
+		if av.actionId == actionId {
+			// Extend the existing variables
+			v.Variables[i].variables = append(v.Variables[i].variables, variables...)
+			return
+		}
+	}
+
+	// If no existing actionVariable found, create a new one
 	v.Variables = append(v.Variables, actionVariables{
 		actionId:  actionId,
 		variables: variables,
 	})
 }
 
-var variables Variables
+var StoredVariables Variables
 
 func parseVariables(input []string) {
 	for _, variable := range input {
@@ -26,5 +36,6 @@ func parseVariables(input []string) {
 		if err != nil {
 			panic(err)
 		}
+		StoredVariables.AddActionVariables(0, []parser.Variable{*v})
 	}
 }

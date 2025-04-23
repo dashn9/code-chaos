@@ -36,6 +36,8 @@ type Variable struct {
 	IsFunc bool
 	// FuncArgs holds the arguments for function calls with their types
 	FuncArgs []FuncArg
+	// CacheResult indicates whether the function result should be cached (true) or evaluated each time (false)
+	CacheResult bool
 }
 
 // Regex patterns for parsing different expressions
@@ -46,7 +48,8 @@ var (
 
 	// funcPattern matches function calls: value(type):func(value1(type1),value2(type2))
 	// Example: random(string):rng(42(int),100(int)), 100.5(float):max(19.99(float),100.5(float))
-	funcPattern = regexp.MustCompile(`^([^(]+)\s*\(\s*(\w+)\s*\)\s*:\s*([a-zA-Z]{3,4})\s*\(\s*([^)]+)\s*\)$`)
+	// With caching marker: random(string):rng!(42(int),100(int))
+	funcPattern = regexp.MustCompile(`^([^(]+)\s*\(\s*(\w+)\s*\)\s*:\s*([a-zA-Z]{3,4})(!?)\s*\(\s*([^)]+)\s*\)$`)
 
 	// argPattern matches function arguments: value(type) or variable reference
 	// Example: 42(int), 19.99(float), "hello"(string), true(bool), myVar
@@ -59,6 +62,8 @@ var (
 //     Example: x(int):42
 //  2. Function call: value(type):func(value1(type1),value2(type2))
 //     Example: random(string):rng(42(int),100(int))
+//     With caching marker: random(string):rng!(42(int),100(int))
+//     The '!' after the function name indicates the result should be cached
 //
 // Returns:
 // - *Variable: The parsed expression
@@ -129,14 +134,15 @@ func parseVariableMatch(matches []string) (*Variable, error) {
 // - IsFunc: true
 // - FuncArgs: slice of FuncArg structs containing type and value information
 func parseFunctionMatch(matches []string) (*Variable, error) {
-	if len(matches) != 5 {
+	if len(matches) != 6 {
 		return nil, errors.New("invalid function match")
 	}
 
 	value := strings.TrimSpace(matches[1])
 	returnType := strings.TrimSpace(matches[2])
 	name := matches[3]
-	argsStr := matches[4]
+	cacheMarker := matches[4]
+	argsStr := matches[5]
 
 	// Validate return type
 	if !ValidTypes[returnType] {
@@ -198,11 +204,12 @@ func parseFunctionMatch(matches []string) (*Variable, error) {
 	}
 
 	return &Variable{
-		Name:     name,
-		Type:     returnType,
-		Value:    value,
-		IsFunc:   true,
-		FuncArgs: funcArgs,
+		Name:        name,
+		Type:        returnType,
+		Value:       value,
+		IsFunc:      true,
+		FuncArgs:    funcArgs,
+		CacheResult: cacheMarker == "!",
 	}, nil
 }
 
