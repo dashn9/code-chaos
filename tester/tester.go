@@ -19,7 +19,7 @@ func ExecuteAction(action *schema.Action) (string, error) {
 	switch action.Type {
 	case "endpoint":
 		return executeEndpointAction(action)
-	case "broker:rmq":
+	case "broker:rabbitmq":
 		return executeRmqBrokerAction(action)
 	default:
 		return "", fmt.Errorf("unsupported action type: %s", action.Type)

@@ -1,5 +1,17 @@
 package schema
 
+// Global represents the global configuration
+type Global struct {
+	Variables []string `yaml:"variables"`
+	Broker    []Broker `yaml:"broker"`
+}
+
+// Broker represents a broker connection configuration
+type Broker struct {
+	Connection    string `yaml:"connection"`
+	ConnectionURL string `yaml:"connection_url"`
+}
+
 // ExpectedResult represents a condition and its expected value
 type ExpectedResult struct {
 	ID            int    `yaml:"id"`
@@ -18,12 +30,13 @@ type EndpointAction struct {
 
 // RmqBrokerAction represents a RabbitMQ broker action
 type RmqBrokerAction struct {
-	ID         int    `yaml:"id"`
-	Type       string `yaml:"type"`
-	Exchange   string `yaml:"exchange"`
-	Queue      string `yaml:"queue"`
-	RoutingKey string `yaml:"routing_key"`
-	Message    string `yaml:"message"`
+	ID           int    `yaml:"id"`
+	Type         string `yaml:"type"`
+	Exchange     string `yaml:"exchange"`
+	Queue        string `yaml:"queue"`
+	RoutingKey   string `yaml:"routing_key"`
+	Message      string `yaml:"message"`
+	ConnectionID string `yaml:"connection_id"`
 }
 
 // Action represents a generic action that can be either an endpoint or broker action
@@ -37,6 +50,7 @@ type Action struct {
 	Queue              string           `yaml:"queue,omitempty"`
 	RoutingKey         string           `yaml:"routing_key,omitempty"`
 	Message            string           `yaml:"message,omitempty"`
+	ConnectionID       string           `yaml:"connection_id,omitempty"`
 	BehaviourOnFail    string           `yaml:"behaviour_on_fail,omitempty"`
 	BehaviourOnSuccess string           `yaml:"behaviour_on_success,omitempty"`
 	ExpectedResults    []ExpectedResult `yaml:"expected_results,omitempty"`
@@ -62,14 +76,10 @@ type Generate struct {
 
 // TestFile represents the complete test file structure
 type TestFile struct {
-	Globals   []Global         `yaml:"globals"`
+	Globals   Global           `yaml:"globals"`
 	Results   []ExpectedResult `yaml:"results"`
+	Resources []string         `yaml:"resources"`
 	Actions   []Action         `yaml:"actions"`
 	Generates []Generate       `yaml:"generates"`
 	Tests     []Test           `yaml:"tests"`
-}
-
-// Global represents global variables and settings
-type Global struct {
-	Variables []string `yaml:"variables"`
 }
