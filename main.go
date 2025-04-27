@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Ishogbon/code-chaos/brokers"
 	"github.com/Ishogbon/code-chaos/procedures"
 	"github.com/Ishogbon/code-chaos/reader"
 	"github.com/Ishogbon/code-chaos/schema"
@@ -28,6 +29,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load test file: %v", err)
 	}
+
+	brokers.CreateBrokerConnectionManagerInstance(testFile.Globals.Brokers)
 
 	procedures.StoreActions(testFile.Actions)
 

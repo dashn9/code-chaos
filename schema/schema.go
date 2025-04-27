@@ -3,12 +3,12 @@ package schema
 // Global represents the global configuration
 type Global struct {
 	Variables []string `yaml:"variables"`
-	Broker    []Broker `yaml:"broker"`
+	Brokers   []Broker `yaml:"brokers"`
 }
 
 // Broker represents a broker connection configuration
 type Broker struct {
-	Connection    string `yaml:"connection"`
+	ConnectionID  string `yaml:"connection"`
 	ConnectionURL string `yaml:"connection_url"`
 	Type          string `yaml:"type"`
 }
