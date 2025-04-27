@@ -13,6 +13,6 @@ func Generate(test []schema.Generate) {
 		if err != nil {
 			panic(err)
 		}
-		ExecuteAction(action)
+		ExecuteAction(action, "generate", generate.ID)
 	}
 }

@@ -1,8 +1,6 @@
 package tester
 
 import (
-	"fmt"
-
 	"github.com/Ishogbon/code-chaos/schema"
 )
 
@@ -12,30 +10,6 @@ func Test(test *schema.Test, action *schema.Action, results []schema.ExpectedRes
 
 	// For now, just return success
 	return nil
-}
-
-// ExecuteAction executes an action and returns the result
-func ExecuteAction(action *schema.Action) (string, error) {
-	switch action.Type {
-	case "endpoint":
-		return executeEndpointAction(action)
-	case "broker:rabbitmq":
-		return executeRmqBrokerAction(action)
-	default:
-		return "", fmt.Errorf("unsupported action type: %s", action.Type)
-	}
-}
-
-// executeEndpointAction executes an HTTP endpoint action
-func executeEndpointAction(action *schema.Action) (string, error) {
-
-	return "", nil
-}
-
-// executeRmqBrokerAction executes a message broker action
-func executeRmqBrokerAction(action *schema.Action) (string, error) {
-	// TODO: Implement message broker action execution
-	return "", nil
 }
 
 // ValidateResult validates the result against the expected results

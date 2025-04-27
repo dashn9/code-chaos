@@ -12,6 +12,13 @@ type RMQ struct {
 	Channel    *amqp091.Channel
 }
 
+func (r *RMQ) Publish(exchange string, routingKey string, body []byte) error {
+	return r.Channel.Publish(exchange, routingKey, false, false, amqp091.Publishing{
+		ContentType: "application/json",
+		Body:        body,
+	})
+}
+
 type brokerConnection struct {
 	ConnectionConfig *schema.Broker
 	RMQ              RMQ
