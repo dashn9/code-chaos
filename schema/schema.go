@@ -10,6 +10,7 @@ type Global struct {
 type Broker struct {
 	Connection    string `yaml:"connection"`
 	ConnectionURL string `yaml:"connection_url"`
+	Type          string `yaml:"type"`
 }
 
 // ExpectedResult represents a condition and its expected value
