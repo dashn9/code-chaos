@@ -16,24 +16,24 @@ func parseInt(value string) int {
 	return parsed
 }
 
-func parseFuncArgValue(arg parser.FuncArg, procedureType string, procedureId int) string {
+func parseFuncArgValue(arg *parser.FuncArg, procedureType string, procedureId int) string {
 	if arg.Type == nil {
 		return FetchVariable(arg.Value, procedureType, procedureId).Value
 	}
 	return arg.Value
 }
 
-func ExecuteFunction(function parser.Variable, procedureType string, procedureId int) (string, error) {
+func ExecuteFunction(function *parser.Variable, procedureType string, procedureId int) (string, error) {
 	if !function.IsFunc {
 		return "", nil
 	}
 	if function.CacheResult && function.Value != "" {
 		return function.Value, nil
 	}
-	switch function.Name {
+	switch function.FuncName {
 	case "rng":
-		minValue := parseInt(parseFuncArgValue(function.FuncArgs[0], procedureType, procedureId))
-		maxValue := parseInt(parseFuncArgValue(function.FuncArgs[1], procedureType, procedureId))
+		minValue := parseInt(parseFuncArgValue(&function.FuncArgs[0], procedureType, procedureId))
+		maxValue := parseInt(parseFuncArgValue(&function.FuncArgs[1], procedureType, procedureId))
 		value := rand.IntN(maxValue-minValue+1) + minValue
 		function.Value = strconv.Itoa(value)
 		return function.Value, nil

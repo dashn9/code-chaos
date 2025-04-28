@@ -13,59 +13,75 @@ type testVariables struct {
 	id        int
 }
 
+func (t *testVariables) addVariable(variable parser.Variable) {
+	t.variables = append(t.variables, variable)
+}
+
+func (t *testVariables) addVariables(variables []parser.Variable) {
+	t.variables = append(t.variables, variables...)
+}
+
 type generateVariables struct {
 	variables []parser.Variable
 	id        int
 }
 
+func (g *generateVariables) addVariable(variable parser.Variable) {
+	g.variables = append(g.variables, variable)
+}
+
+func (g *generateVariables) addVariables(variables []parser.Variable) {
+	g.variables = append(g.variables, variables...)
+}
+
 type Variables struct {
-	testVariables     []testVariables
-	generateVariables []generateVariables
+	testVariables     map[int]*testVariables
+	generateVariables map[int]*generateVariables
 }
 
 func (v *Variables) GetGenerateVariable(generateVariablesId int, variableName string) (parser.Variable, error) {
-	for _, variable := range v.generateVariables[generateVariablesId].variables {
+	// Check if the map entry exists
+	genVars, exists := v.generateVariables[generateVariablesId]
+	if !exists || genVars == nil {
+		return parser.Variable{}, errors.New("variable not found: " + variableName)
+	}
+
+	for _, variable := range genVars.variables {
 		if variable.Name == variableName {
 			return variable, nil
 		}
 	}
-	return parser.Variable{}, errors.New("variable not found")
+	return parser.Variable{}, errors.New("variable not found: " + variableName)
 }
+
 func (v *Variables) AddGenerateVariables(id int, variables []parser.Variable) {
-	// Check if a generateVariable with the given id already exists
-	for i, av := range v.generateVariables {
-		if av.id == id {
-			// Extend the existing variables
-			v.generateVariables[i].variables = append(v.generateVariables[i].variables, variables...)
-			return
+	// Check if the map entry exists, if not create it
+	if _, exists := v.generateVariables[id]; !exists {
+		v.generateVariables[id] = &generateVariables{
+			id:        id,
+			variables: []parser.Variable{},
 		}
 	}
 
-	// If no existing generateVariable found, create a new one
-	v.generateVariables = append(v.generateVariables, generateVariables{
-		id:        id,
-		variables: variables,
-	})
+	v.generateVariables[id].addVariables(variables)
 }
 
 func (v *Variables) AddTestVariables(id int, variables []parser.Variable) {
-	// Check if an actionVariable with the given id already exists
-	for i, av := range v.testVariables {
-		if av.id == id {
-			// Extend the existing variables
-			v.testVariables[i].variables = append(v.testVariables[i].variables, variables...)
-			return
+	// Check if the map entry exists, if not create it
+	if _, exists := v.testVariables[id]; !exists {
+		v.testVariables[id] = &testVariables{
+			id:        id,
+			variables: []parser.Variable{},
 		}
 	}
 
-	// If no existing actionVariable found, create a new one
-	v.testVariables = append(v.testVariables, testVariables{
-		id:        id,
-		variables: variables,
-	})
+	v.testVariables[id].addVariables(variables)
 }
 
-var StoredVariables Variables
+var StoredVariables = Variables{
+	testVariables:     make(map[int]*testVariables),
+	generateVariables: make(map[int]*generateVariables),
+}
 
 func StoreVariables(id int, input []string, variableType string) {
 	for _, variable := range input {
@@ -112,18 +128,18 @@ func FetchVariable(variableName string, procedureType string, procedureID int) p
 
 func ReplaceVariablesWithValuesInString(input string, procedureType string, procedureID int) string {
 	variableNames := FindVariablesInString(input)
-	var variables []parser.Variable
+	var variables []*parser.Variable
 	if procedureType == "generate" {
 		for _, variableName := range variableNames {
 			variable, err := StoredVariables.GetGenerateVariable(procedureID, variableName)
 			if err != nil {
 				panic(err)
 			}
-			_, err = ExecuteFunction(variable, procedureType, procedureID)
+			_, err = ExecuteFunction(&variable, procedureType, procedureID)
 			if err != nil {
 				panic(err)
 			}
-			variables = append(variables, variable)
+			variables = append(variables, &variable)
 		}
 	} else if procedureType == "test" {
 	}
