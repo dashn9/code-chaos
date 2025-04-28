@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Ishogbon/code-chaos/schema"
+
 	"github.com/rabbitmq/amqp091-go"
 )
 

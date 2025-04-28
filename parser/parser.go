@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+// NOTES
+
 // ValidTypes defines the allowed types in the system
 var ValidTypes = map[string]bool{
 	"int":    true,
@@ -34,6 +36,8 @@ type Variable struct {
 	Value string
 	// IsFunc indicates whether this is a function call (true) or variable declaration (false)
 	IsFunc bool
+	// FuncName holds the name of the function to be called
+	FuncName string
 	// FuncArgs holds the arguments for function calls with their types
 	FuncArgs []FuncArg
 	// CacheResult indicates whether the function result should be cached (true) or evaluated each time (false)
@@ -49,11 +53,11 @@ var (
 	// funcPattern matches function calls: value(type):func(value1(type1),value2(type2))
 	// Example: random(string):rng(42(int),100(int)), 100.5(float):max(19.99(float),100.5(float))
 	// With caching marker: random(string):rng!(42(int),100(int))
-	funcPattern = regexp.MustCompile(`^([^(]+)\s*\(\s*(\w+)\s*\)\s*:\s*([a-zA-Z]{3,4})(!?)\s*\(\s*([^)]+)\s*\)$`)
+	funcPattern = regexp.MustCompile(`^([A-Za-z][A-Za-z0-9]+)\s*\(\s*(\w+)\s*\)\s*:\s*([a-zA-Z]{3,4})(!?)\s*\(\s*(.+)\s*\)$`)
 
 	// argPattern matches function arguments: value(type) or variable reference
 	// Example: 42(int), 19.99(float), "hello"(string), true(bool), myVar
-	argPattern = regexp.MustCompile(`^([^(]+)(?:\s*\(\s*(\w+)\s*\))?$`)
+	argPattern = regexp.MustCompile(`^(.+?)(?:\s*\(\s*(\w+)\s*\))?$`)
 )
 
 // ParseVariable parses a string expression and returns a Variable struct.
@@ -122,7 +126,7 @@ func parseVariableMatch(matches []string) (*Variable, error) {
 //
 // The function validates:
 // - Function name length (must be 3-4 letters)
-// - Argument format (value(type) or variable reference value())
+// - Argument format (value(type) or variable reference $varName)
 // - Argument types (must be valid types: int, float, string, bool)
 // - Argument values (must be valid for their types)
 // - Return value type (must be a valid type)
@@ -138,9 +142,9 @@ func parseFunctionMatch(matches []string) (*Variable, error) {
 		return nil, errors.New("invalid function match")
 	}
 
-	value := strings.TrimSpace(matches[1])
+	name := strings.TrimSpace(matches[1])
 	returnType := strings.TrimSpace(matches[2])
-	name := matches[3]
+	funcName := matches[3]
 	cacheMarker := matches[4]
 	argsStr := matches[5]
 
@@ -149,17 +153,14 @@ func parseFunctionMatch(matches []string) (*Variable, error) {
 		return nil, fmt.Errorf("unsupported return type: %s. Valid types are: int, float, string, bool", returnType)
 	}
 
-	// Validate return value
-	if err := validateValue(value, returnType); err != nil {
-		return nil, fmt.Errorf("invalid return value: %w", err)
-	}
-
 	// Validate function name length (3-4 letters)
-	if len(name) < 3 || len(name) > 4 {
-		return nil, fmt.Errorf("function name must be 3-4 letters long: %s", name)
+	if len(funcName) < 3 || len(funcName) > 4 {
+		return nil, fmt.Errorf("function name must be 3-4 letters long: %s", funcName)
 	}
 
 	// Split and validate arguments
+	// There is a potential that a comma would be present in the argument value, which would be a problem
+	// to fix, there should be a way to escape such variables, also a comprehensive parsing is needed.
 	argStrings := strings.Split(argsStr, ",")
 	funcArgs := make([]FuncArg, 0, len(argStrings))
 
@@ -175,9 +176,12 @@ func parseFunctionMatch(matches []string) (*Variable, error) {
 		// Check if this is a variable reference (no type specified)
 		if len(argMatches) == 2 || argMatches[2] == "" {
 			// This is a variable reference
+			if !strings.HasPrefix(argValue, "$") {
+				return nil, fmt.Errorf("variable reference must start with $: %s", argValue)
+			}
 			funcArgs = append(funcArgs, FuncArg{
 				Type:  nil, // Type is nil for variable references
-				Value: argValue,
+				Value: argValue[1:],
 			})
 			continue
 		}
@@ -195,10 +199,8 @@ func parseFunctionMatch(matches []string) (*Variable, error) {
 			return nil, fmt.Errorf("invalid argument value: %w", err)
 		}
 
-		// Create a pointer to the type string
-		typePtr := &argType
 		funcArgs = append(funcArgs, FuncArg{
-			Type:  typePtr,
+			Type:  &argType,
 			Value: argValue,
 		})
 	}
@@ -206,8 +208,9 @@ func parseFunctionMatch(matches []string) (*Variable, error) {
 	return &Variable{
 		Name:        name,
 		Type:        returnType,
-		Value:       value,
+		Value:       "",
 		IsFunc:      true,
+		FuncName:    funcName,
 		FuncArgs:    funcArgs,
 		CacheResult: cacheMarker == "!",
 	}, nil
