@@ -9,29 +9,33 @@ import (
 )
 
 type testVariables struct {
-	variables []parser.Variable
+	variables map[string]parser.Variable
 	id        int
 }
 
 func (t *testVariables) addVariable(variable parser.Variable) {
-	t.variables = append(t.variables, variable)
+	t.variables[variable.Name] = variable
 }
 
 func (t *testVariables) addVariables(variables []parser.Variable) {
-	t.variables = append(t.variables, variables...)
+	for _, variable := range variables {
+		t.variables[variable.Name] = variable
+	}
 }
 
 type generateVariables struct {
-	variables []parser.Variable
+	variables map[string]parser.Variable
 	id        int
 }
 
 func (g *generateVariables) addVariable(variable parser.Variable) {
-	g.variables = append(g.variables, variable)
+	g.variables[variable.Name] = variable
 }
 
 func (g *generateVariables) addVariables(variables []parser.Variable) {
-	g.variables = append(g.variables, variables...)
+	for _, variable := range variables {
+		g.variables[variable.Name] = variable
+	}
 }
 
 type Variables struct {
@@ -46,12 +50,11 @@ func (v *Variables) GetGenerateVariable(generateVariablesId int, variableName st
 		return parser.Variable{}, errors.New("variable not found: " + variableName)
 	}
 
-	for _, variable := range genVars.variables {
-		if variable.Name == variableName {
-			return variable, nil
-		}
+	variable, exists := genVars.variables[variableName]
+	if !exists {
+		return parser.Variable{}, errors.New("variable not found: " + variableName)
 	}
-	return parser.Variable{}, errors.New("variable not found: " + variableName)
+	return variable, nil
 }
 
 func (v *Variables) AddGenerateVariables(id int, variables []parser.Variable) {
@@ -59,7 +62,7 @@ func (v *Variables) AddGenerateVariables(id int, variables []parser.Variable) {
 	if _, exists := v.generateVariables[id]; !exists {
 		v.generateVariables[id] = &generateVariables{
 			id:        id,
-			variables: []parser.Variable{},
+			variables: make(map[string]parser.Variable),
 		}
 	}
 
@@ -71,7 +74,7 @@ func (v *Variables) AddTestVariables(id int, variables []parser.Variable) {
 	if _, exists := v.testVariables[id]; !exists {
 		v.testVariables[id] = &testVariables{
 			id:        id,
-			variables: []parser.Variable{},
+			variables: make(map[string]parser.Variable),
 		}
 	}
 
