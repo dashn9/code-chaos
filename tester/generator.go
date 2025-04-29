@@ -16,11 +16,13 @@ func Generate(test []schema.Generate) {
 			log.Printf("Generating Resource ID: %d, Count: %d", generate.ID, i+1)
 			data.StoreVariables(generate.ID, []string{"count(int):" + strconv.Itoa(i+1)}, "generate")
 			data.StoreVariables(generate.ID, generate.Variables, "generate")
-			action, err := procedures.GetAction(generate.Action)
-			if err != nil {
-				panic(err)
+			for _, actionID := range generate.Actions {
+				action, err := procedures.GetAction(actionID)
+				if err != nil {
+					panic(err)
+				}
+				ExecuteAction(action, "generate", generate.ID)
 			}
-			ExecuteAction(action, "generate", generate.ID)
 		}
 	}
 }
