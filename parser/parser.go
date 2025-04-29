@@ -87,7 +87,7 @@ func ParseVariable(input string) (*Variable, error) {
 		return parseVariableMatch(matches)
 	}
 
-	return nil, errors.New("invalid format: does not match expected patterns")
+	return nil, errors.New("invalid format: variable defined as: " + input + " does not match expected patterns")
 }
 
 // parseVariableMatch processes a variable declaration match.

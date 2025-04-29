@@ -9,30 +9,30 @@ import (
 )
 
 type testVariables struct {
-	variables map[string]parser.Variable
+	variables map[string]*parser.Variable
 	id        int
 }
 
-func (t *testVariables) addVariable(variable parser.Variable) {
+func (t *testVariables) addVariable(variable *parser.Variable) {
 	t.variables[variable.Name] = variable
 }
 
-func (t *testVariables) addVariables(variables []parser.Variable) {
+func (t *testVariables) addVariables(variables []*parser.Variable) {
 	for _, variable := range variables {
 		t.variables[variable.Name] = variable
 	}
 }
 
 type generateVariables struct {
-	variables map[string]parser.Variable
+	variables map[string]*parser.Variable
 	id        int
 }
 
-func (g *generateVariables) addVariable(variable parser.Variable) {
+func (g *generateVariables) addVariable(variable *parser.Variable) {
 	g.variables[variable.Name] = variable
 }
 
-func (g *generateVariables) addVariables(variables []parser.Variable) {
+func (g *generateVariables) addVariables(variables []*parser.Variable) {
 	for _, variable := range variables {
 		g.variables[variable.Name] = variable
 	}
@@ -43,38 +43,38 @@ type Variables struct {
 	generateVariables map[int]*generateVariables
 }
 
-func (v *Variables) GetGenerateVariable(generateVariablesId int, variableName string) (parser.Variable, error) {
+func (v *Variables) GetGenerateVariable(generateVariablesId int, variableName string) (*parser.Variable, error) {
 	// Check if the map entry exists
 	genVars, exists := v.generateVariables[generateVariablesId]
 	if !exists || genVars == nil {
-		return parser.Variable{}, errors.New("variable not found: " + variableName)
+		return &parser.Variable{}, errors.New("variable not found: " + variableName)
 	}
 
 	variable, exists := genVars.variables[variableName]
 	if !exists {
-		return parser.Variable{}, errors.New("variable not found: " + variableName)
+		return &parser.Variable{}, errors.New("variable not found: " + variableName)
 	}
 	return variable, nil
 }
 
-func (v *Variables) AddGenerateVariables(id int, variables []parser.Variable) {
+func (v *Variables) AddGenerateVariables(id int, variables []*parser.Variable) {
 	// Check if the map entry exists, if not create it
 	if _, exists := v.generateVariables[id]; !exists {
 		v.generateVariables[id] = &generateVariables{
 			id:        id,
-			variables: make(map[string]parser.Variable),
+			variables: make(map[string]*parser.Variable),
 		}
 	}
 
 	v.generateVariables[id].addVariables(variables)
 }
 
-func (v *Variables) AddTestVariables(id int, variables []parser.Variable) {
+func (v *Variables) AddTestVariables(id int, variables []*parser.Variable) {
 	// Check if the map entry exists, if not create it
 	if _, exists := v.testVariables[id]; !exists {
 		v.testVariables[id] = &testVariables{
 			id:        id,
-			variables: make(map[string]parser.Variable),
+			variables: make(map[string]*parser.Variable),
 		}
 	}
 
@@ -93,9 +93,9 @@ func StoreVariables(id int, input []string, variableType string) {
 			panic(err)
 		}
 		if variableType == "test" {
-			StoredVariables.AddTestVariables(id, []parser.Variable{*v})
+			StoredVariables.AddTestVariables(id, []*parser.Variable{v})
 		} else if variableType == "generate" {
-			StoredVariables.AddGenerateVariables(id, []parser.Variable{*v})
+			StoredVariables.AddGenerateVariables(id, []*parser.Variable{v})
 		} else {
 			panic("Invalid variable type")
 		}
@@ -115,7 +115,7 @@ func FindVariablesInString(input string) []string {
 	return result
 }
 
-func FetchVariable(variableName string, procedureType string, procedureID int) parser.Variable {
+func FetchVariable(variableName string, procedureType string, procedureID int) *parser.Variable {
 	if procedureType == "generate" {
 		variable, err := StoredVariables.GetGenerateVariable(procedureID, variableName)
 		if err != nil {
@@ -126,7 +126,7 @@ func FetchVariable(variableName string, procedureType string, procedureID int) p
 	// else if procedureType == "test" {
 	// 	return StoredVariables.GetTestVariable(procedureID, variableName)
 	// }
-	return parser.Variable{}
+	return &parser.Variable{}
 }
 
 func ReplaceVariablesWithValuesInString(input string, procedureType string, procedureID int) string {
@@ -138,11 +138,11 @@ func ReplaceVariablesWithValuesInString(input string, procedureType string, proc
 			if err != nil {
 				panic(err)
 			}
-			_, err = ExecuteFunction(&variable, procedureType, procedureID)
+			_, err = ExecuteFunction(variable, procedureType, procedureID)
 			if err != nil {
 				panic(err)
 			}
-			variables = append(variables, &variable)
+			variables = append(variables, variable)
 		}
 	} else if procedureType == "test" {
 	}

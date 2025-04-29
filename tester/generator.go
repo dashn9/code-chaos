@@ -1,6 +1,7 @@
 package tester
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 
@@ -11,7 +12,7 @@ import (
 
 func Generate(test []schema.Generate) {
 	for _, generate := range test {
-		log.Printf("Generating Resources ID: %d, Count: %d", generate.ID, generate.Count)
+		log.Printf("Procedure :: Generation :: %d, Count :: %d", generate.ID, generate.Count)
 		for i := 0; i < generate.Count; i++ {
 			log.Printf("Generating Resource ID: %d, Count: %d", generate.ID, i+1)
 			data.StoreVariables(generate.ID, []string{"count(int):" + strconv.Itoa(i+1)}, "generate")
@@ -21,9 +22,26 @@ func Generate(test []schema.Generate) {
 				if err != nil {
 					panic(err)
 				}
-				ExecuteAction(action, "generate", generate.ID)
+				_, err = ExecuteAction(action, "generate", generate.ID)
+				if err != nil {
+					panic(fmt.Sprintf("Error executing action %d: %v", actionID, err))
+				}
 			}
-
+			for _, expectedResultID := range generate.ExpectedResults {
+				expectedResult, err := procedures.GetResult(expectedResultID)
+				if err != nil {
+					panic(err)
+				}
+				result, err := ExecuteResult(expectedResult, "generate", generate.ID)
+				if err != nil {
+					panic(err)
+				}
+				if !result {
+					panic("Expected result not met")
+				} else {
+					log.Printf("Expected result met for ID: %d", expectedResultID)
+				}
+			}
 		}
 	}
 }
