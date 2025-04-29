@@ -107,6 +107,10 @@ func ExecuteResult(result *schema.ExpectedResult, procedureType string, procedur
 			if variable.Value == variableToTestAgainst {
 				success = true
 			}
+		} else if result.Condition == "neq" {
+			if variable.Value != variableToTestAgainst {
+				success = true
+			}
 		}
 	}
 	return success, nil
