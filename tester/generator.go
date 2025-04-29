@@ -23,6 +23,7 @@ func Generate(test []schema.Generate) {
 				}
 				ExecuteAction(action, "generate", generate.ID)
 			}
+
 		}
 	}
 }

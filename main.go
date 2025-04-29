@@ -32,6 +32,7 @@ func main() {
 	brokers.CreateBrokerConnectionManagerInstance(testFile.Globals.Brokers)
 
 	procedures.StoreActions(testFile.Actions)
+	procedures.StoreResults(testFile.Results)
 
 	tester.Generate(testFile.Generates)
 

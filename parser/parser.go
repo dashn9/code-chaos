@@ -242,3 +242,24 @@ func validateValue(value, typeStr string) error {
 	}
 	return nil
 }
+
+// ParseExpectedResultCheck parses a check string into variable and path components
+// Example: "$limit:account_details.limit" -> ["limit", ["account_details", "limit"]]
+func ParseExpectedResultCheck(check string) (string, []string, error) {
+	// Split by colon to separate variable from path
+	parts := strings.Split(check, ":")
+	if len(parts) != 2 {
+		return "", nil, fmt.Errorf("invalid check format: %s", check)
+	}
+
+	// Extract variable name (remove $ prefix)
+	variable := strings.TrimPrefix(parts[0], "$")
+	if variable == parts[0] {
+		return "", nil, fmt.Errorf("variable must start with $: %s", check)
+	}
+
+	// Split path by dots
+	path := strings.Split(parts[1], ".")
+
+	return variable, path, nil
+}
