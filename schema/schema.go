@@ -20,7 +20,7 @@ type ExpectedResult struct {
 	Checks    []string `yaml:"checks,omitempty"`
 }
 
-// Data represents the data configuration for an action
+// ResponseDataType represents the data configuration for an action
 type ResponseDataType struct {
 	ID   string `yaml:"id"`
 	Type string `yaml:"type"`
@@ -46,7 +46,7 @@ type RmqBrokerAction struct {
 	ConnectionID string `yaml:"connection_id"`
 }
 
-// Action represents a generic action that can be either an endpoint or broker action
+// Action represents a generic action that can be either an endpoint, broker, or database action
 type Action struct {
 	ID               int              `yaml:"id"`
 	Type             string           `yaml:"type"`
@@ -58,6 +58,7 @@ type Action struct {
 	RoutingKey       string           `yaml:"routing_key,omitempty"`
 	Message          string           `yaml:"message,omitempty"`
 	ConnectionID     string           `yaml:"connection_id,omitempty"`
+	Query            string           `yaml:"query,omitempty"`
 	ResponseDataType ResponseDataType `yaml:"data,omitempty"`
 }
 
