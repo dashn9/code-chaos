@@ -2,6 +2,8 @@ package db
 
 import (
 	"fmt"
+
+	"github.com/Ishogbon/code-chaos/schema"
 )
 
 // DBElement represents a single database element (row/document)
@@ -106,4 +108,52 @@ func (d *DB) Close() error {
 	}
 
 	return fmt.Errorf("invalid database type or client")
+}
+
+// dbConnection holds a single DB connection and its config
+type dbConnection struct {
+	ConnectionConfig *schema.DBConfig
+	DB               *DB
+}
+
+// DBConnectionManager manages multiple DB connections
+type DBConnectionManager struct {
+	Connections map[string]dbConnection
+}
+
+// GetConnection retrieves a DB connection by its ID
+func (m *DBConnectionManager) GetConnection(connectionID string) dbConnection {
+	return m.Connections[connectionID]
+}
+
+// CreateConnection creates and stores a DB connection from config
+func (m *DBConnectionManager) CreateConnection(connectionConfig *schema.DBConfig) {
+	db, err := NewDBFactory().CreateDB(connectionConfig.Type, connectionConfig.ConnectionURL)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to connect to DB: %v", err))
+	}
+	m.Connections[connectionConfig.ConnectionID] = dbConnection{
+		ConnectionConfig: connectionConfig,
+		DB:               db,
+	}
+}
+
+// CloseConnection closes and removes a DB connection by its ID
+func (m *DBConnectionManager) CloseConnection(connectionID string) {
+	conn := m.Connections[connectionID]
+	conn.DB.Close()
+	delete(m.Connections, connectionID)
+}
+
+// DBConnectionManagerInstance is the global instance
+var DBConnectionManagerInstance DBConnectionManager
+
+// CreateDBConnectionManagerInstance initializes the manager with configs
+func CreateDBConnectionManagerInstance(connectionConfigs []schema.DBConfig) {
+	DBConnectionManagerInstance = DBConnectionManager{
+		Connections: make(map[string]dbConnection),
+	}
+	for _, connectionConfig := range connectionConfigs {
+		DBConnectionManagerInstance.CreateConnection(&connectionConfig)
+	}
 }

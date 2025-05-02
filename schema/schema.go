@@ -1,9 +1,17 @@
 package schema
 
+// DBConfig represents a database connection configuration
+type DBConfig struct {
+	ConnectionID  string `yaml:"connection"`
+	ConnectionURL string `yaml:"connection_url"`
+	Type          string `yaml:"type"`
+}
+
 // Global represents the global configuration
 type Global struct {
-	Variables []string `yaml:"variables"`
-	Brokers   []Broker `yaml:"brokers"`
+	Variables []string   `yaml:"variables"`
+	Brokers   []Broker   `yaml:"brokers"`
+	DBs       []DBConfig `yaml:"db"`
 }
 
 // Broker represents a broker connection configuration

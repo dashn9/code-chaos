@@ -15,31 +15,31 @@ type HTTPResponse struct {
 	ResponseDataTypeMarker *schema.ResponseDataType
 }
 
-// ResponseStore manages HTTP responses for both test and generate actions
-type ResponseStore struct {
+// HTTPStore manages HTTP responses for both test and generate actions
+type HTTPStore struct {
 	testResponses     map[string]HTTPResponse // key: ResponseDataType_id
 	generateResponses map[string]HTTPResponse // key: ResponseDataType_id
 }
 
-var Store = &ResponseStore{
+var HTTP = &HTTPStore{
 	testResponses:     make(map[string]HTTPResponse),
 	generateResponses: make(map[string]HTTPResponse),
 }
 
 // StoreTestResponse stores an HTTP response for a test action
-func (s *ResponseStore) StoreTestResponse(responseDataTypeMarker *schema.ResponseDataType, testId int, response HTTPResponse) {
+func (s *HTTPStore) StoreTestResponse(responseDataTypeMarker *schema.ResponseDataType, testId int, response HTTPResponse) {
 	key := fmt.Sprintf("%d_%s", testId, responseDataTypeMarker.ID)
 	s.testResponses[key] = response
 }
 
 // StoreGenerateResponse stores an HTTP response for a generate action
-func (s *ResponseStore) StoreGenerateResponse(responseDataTypeMarker *schema.ResponseDataType, generateId int, response HTTPResponse) {
+func (s *HTTPStore) StoreGenerateResponse(responseDataTypeMarker *schema.ResponseDataType, generateId int, response HTTPResponse) {
 	key := fmt.Sprintf("%d_%s", generateId, responseDataTypeMarker.ID)
 	s.generateResponses[key] = response
 }
 
 // GetTestResponse retrieves an HTTP response for a test action
-func (s *ResponseStore) GetTestResponse(testID int, responseDataTypeMarkerID string) (HTTPResponse, error) {
+func (s *HTTPStore) GetTestResponse(testID int, responseDataTypeMarkerID string) (HTTPResponse, error) {
 	key := fmt.Sprintf("%d_%s", testID, responseDataTypeMarkerID)
 	response, exists := s.testResponses[key]
 	if !exists {
@@ -49,7 +49,7 @@ func (s *ResponseStore) GetTestResponse(testID int, responseDataTypeMarkerID str
 }
 
 // GetGenerateResponse retrieves an HTTP response for a generate action
-func (s *ResponseStore) GetGenerateResponse(generateID int, responseDataTypeMarkerID string) (HTTPResponse, error) {
+func (s *HTTPStore) GetGenerateResponse(generateID int, responseDataTypeMarkerID string) (HTTPResponse, error) {
 	key := fmt.Sprintf("%d_%s", generateID, responseDataTypeMarkerID)
 	response, exists := s.generateResponses[key]
 	if !exists {
@@ -58,7 +58,7 @@ func (s *ResponseStore) GetGenerateResponse(generateID int, responseDataTypeMark
 	return response, nil
 }
 
-func (s *ResponseStore) GetResponse(procedureType string, procedureID int, responseDataTypeMarkerID string) (HTTPResponse, error) {
+func (s *HTTPStore) GetResponse(procedureType string, procedureID int, responseDataTypeMarkerID string) (HTTPResponse, error) {
 	if procedureType == "test" {
 		return s.GetTestResponse(procedureID, responseDataTypeMarkerID)
 	} else if procedureType == "generate" {
@@ -67,7 +67,7 @@ func (s *ResponseStore) GetResponse(procedureType string, procedureID int, respo
 	return HTTPResponse{}, fmt.Errorf("invalid procedure type: %s", procedureType)
 }
 
-func (s *ResponseStore) StoreResponse(procedureType string, procedureID int, responseDataTypeMarker *schema.ResponseDataType, response HTTPResponse) {
+func (s *HTTPStore) StoreResponse(procedureType string, procedureID int, responseDataTypeMarker *schema.ResponseDataType, response HTTPResponse) {
 	if procedureType == "test" {
 		s.StoreTestResponse(responseDataTypeMarker, procedureID, response)
 	} else if procedureType == "generate" {
@@ -75,7 +75,7 @@ func (s *ResponseStore) StoreResponse(procedureType string, procedureID int, res
 	}
 }
 
-func (s *ResponseStore) AccessFieldInResponseData(procedureType string, procedureID int, responseDataTypeMarkerID string, accessPaths []string) (interface{}, error) {
+func (s *HTTPStore) AccessFieldInResponseData(procedureType string, procedureID int, responseDataTypeMarkerID string, accessPaths []string) (interface{}, error) {
 	response, err := s.GetResponse(procedureType, procedureID, responseDataTypeMarkerID)
 	if err != nil {
 		return nil, err
@@ -114,17 +114,17 @@ func (s *ResponseStore) AccessFieldInResponseData(procedureType string, procedur
 }
 
 // ClearTestResponses clears all stored test responses
-func (s *ResponseStore) ClearTestResponses() {
+func (s *HTTPStore) ClearTestResponses() {
 	s.testResponses = make(map[string]HTTPResponse)
 }
 
 // ClearGenerateResponses clears all stored generate responses
-func (s *ResponseStore) ClearGenerateResponses() {
+func (s *HTTPStore) ClearGenerateResponses() {
 	s.generateResponses = make(map[string]HTTPResponse)
 }
 
 // ClearAllResponses clears all stored responses
-func (s *ResponseStore) ClearAllResponses() {
+func (s *HTTPStore) ClearAllResponses() {
 	s.testResponses = make(map[string]HTTPResponse)
 	s.generateResponses = make(map[string]HTTPResponse)
 }

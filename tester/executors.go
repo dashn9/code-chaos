@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Ishogbon/code-chaos/brokers"
 	"github.com/Ishogbon/code-chaos/data"
+	"github.com/Ishogbon/code-chaos/db"
 	"github.com/Ishogbon/code-chaos/parser"
 	"github.com/Ishogbon/code-chaos/schema"
 )
@@ -22,6 +25,8 @@ func ExecuteAction(action *schema.Action, procedureType string, procedureID int)
 		return executeEndpointAction(action, procedureType, procedureID)
 	case "broker:rabbitmq":
 		return executeRmqBrokerAction(action, procedureType, procedureID)
+	case "db:sql":
+		return executeSQLDBAction(action, procedureType, procedureID)
 	default:
 		return "", fmt.Errorf("unsupported action type: %s", action.Type)
 	}
@@ -90,6 +95,92 @@ func executeRmqBrokerAction(action *schema.Action, procedureType string, procedu
 	return "", nil
 }
 
+// executeDBAction executes a database action
+func executeSQLDBAction(action *schema.Action, procedureType string, procedureID int) (string, error) {
+	query := action.Query
+	if query == "" {
+		return "", fmt.Errorf("query is required for database actions")
+	}
+
+	query = data.ReplaceVariablesWithValuesInString(query, procedureType, procedureID)
+	// Get the database connection using the connection manager
+	dbConn := db.DBConnectionManagerInstance.GetConnection(action.ConnectionID)
+	if dbConn.DB == nil {
+		return "", fmt.Errorf("database connection is not initialized for connection ID: %s", action.ConnectionID)
+	}
+
+	// Execute the query
+	results, err := dbConn.DB.Query(query)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	// Store the response
+	dbResponse := data.DBResponse{
+		Elements:               results,
+		ResponseDataTypeMarker: &action.ResponseDataType,
+	}
+
+	data.DB.StoreResponse(procedureType, procedureID, &action.ResponseDataType, dbResponse)
+
+	return "", nil
+}
+
+// compareValues performs a comparison between two values based on the given condition
+func compareValues(condition string, value1, value2 interface{}) bool {
+	switch condition {
+	case "eq":
+		return value1 == value2
+	case "neq":
+		return value1 != value2
+	case "gt":
+		if v1, ok := value1.(int); ok {
+			if v2, ok := value2.(int); ok {
+				return v1 > v2
+			}
+		}
+		return false
+	case "lt":
+		if v1, ok := value1.(int); ok {
+			if v2, ok := value2.(int); ok {
+				return v1 < v2
+			}
+		}
+		return false
+	case "gte":
+		if v1, ok := value1.(int); ok {
+			if v2, ok := value2.(int); ok {
+				return v1 >= v2
+			}
+		}
+		return false
+	case "lte":
+		if v1, ok := value1.(int); ok {
+			if v2, ok := value2.(int); ok {
+				return v1 <= v2
+			}
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+// parseArrayLengthCheck parses an array length check string and returns the condition and quantity
+func parseArrayLengthCheck(value string) (string, int, error) {
+	parts := strings.Split(value, ":")
+	if len(parts) != 4 || parts[0] != "arr" || parts[1] != "len" {
+		return "", 0, fmt.Errorf("invalid array length check format: %s", value)
+	}
+
+	quantity, err := strconv.Atoi(parts[3])
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid array length quantity: %s", parts[3])
+	}
+
+	return parts[2], quantity, nil
+}
+
 func ExecuteResult(result *schema.ExpectedResult, procedureType string, procedureID int) (bool, error) {
 	success := false
 	for _, check := range result.Checks {
@@ -103,14 +194,26 @@ func ExecuteResult(result *schema.ExpectedResult, procedureType string, procedur
 		if err != nil {
 			return false, fmt.Errorf("failed to access field in response data: %v", err)
 		}
-		if result.Condition == "eq" {
-			if variable.Value == variableToTestAgainst {
-				success = true
+
+		// Handle array length checks
+		if strings.HasPrefix(result.Condition, "arr:len:") {
+			condition, expectedLen, err := parseArrayLengthCheck(result.Condition)
+			if err != nil {
+				return false, err
 			}
-		} else if result.Condition == "neq" {
-			if variable.Value != variableToTestAgainst {
-				success = true
+
+			// Check if the value is an array/slice
+			actualArray, ok := variableToTestAgainst.([]interface{})
+			if !ok {
+				return false, fmt.Errorf("value is not an array: %v", variableToTestAgainst)
 			}
+
+			// Check array length
+			actualLen := len(actualArray)
+			success = compareValues(condition, actualLen, expectedLen)
+		} else {
+			// Handle regular value comparisons
+			success = compareValues(result.Condition, variable.Value, variableToTestAgainst)
 		}
 	}
 	return success, nil

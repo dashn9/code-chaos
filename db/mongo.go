@@ -97,7 +97,12 @@ func (m *MongoDB) Query(query string, args ...interface{}) (DBElements, error) {
 		if err := cursor.Decode(&result); err != nil {
 			return nil, fmt.Errorf("failed to decode MongoDB result: %v", err)
 		}
-		results = append(results, result)
+		// Convert the MongoDB document to a DBElement
+		element := make(DBElement)
+		for k, v := range result {
+			element[k] = v
+		}
+		results = append(results, element)
 	}
 
 	if err := cursor.Err(); err != nil {

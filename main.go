@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Ishogbon/code-chaos/brokers"
+	"github.com/Ishogbon/code-chaos/db"
 	"github.com/Ishogbon/code-chaos/procedures"
 	"github.com/Ishogbon/code-chaos/reader"
 	"github.com/Ishogbon/code-chaos/tester"
@@ -30,6 +31,7 @@ func main() {
 	}
 
 	brokers.CreateBrokerConnectionManagerInstance(testFile.Globals.Brokers)
+	db.CreateDBConnectionManagerInstance(testFile.Globals.DBs)
 
 	procedures.StoreActions(testFile.Actions)
 	procedures.StoreResults(testFile.Results)

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/Ishogbon/code-chaos/db"
@@ -10,7 +9,7 @@ import (
 
 // DBResponse represents the response from a database action
 type DBResponse struct {
-	Data                   []byte
+	Elements               db.DBElements
 	ResponseDataTypeMarker *schema.ResponseDataType
 }
 
@@ -18,24 +17,11 @@ type DBResponse struct {
 type DBStore struct {
 	testResponses     map[string]DBResponse // key: ResponseDataType_id
 	generateResponses map[string]DBResponse // key: ResponseDataType_id
-	db                *db.DB
 }
 
 var DB = &DBStore{
 	testResponses:     make(map[string]DBResponse),
 	generateResponses: make(map[string]DBResponse),
-}
-
-// NewDBStore creates a new database store instance
-func NewDBStore(dbType string, connectionString string) (*DBStore, error) {
-	factory := db.NewDBFactory()
-	dbInstance, err := factory.CreateDB(dbType, connectionString)
-	if err != nil {
-		return nil, err
-	}
-
-	DB.db = dbInstance
-	return DB, nil
 }
 
 // StoreTestResponse stores a database response for a test action
@@ -89,37 +75,6 @@ func (s *DBStore) StoreResponse(procedureType string, procedureID int, responseD
 	}
 }
 
-// ProcessAction processes a database action and stores the results
-func (s *DBStore) ProcessAction(procedureType string, procedureID int, action schema.Action) error {
-	if action.Type != "db:sql" && action.Type != "db:mongo" {
-		return fmt.Errorf("unsupported action type: %s", action.Type)
-	}
-
-	if action.Query == "" {
-		return fmt.Errorf("query is required for database actions")
-	}
-
-	// Execute the query and get results
-	results, err := s.db.Query(action.Query)
-	if err != nil {
-		return err
-	}
-
-	// Convert results to JSON
-	resultBytes, err := json.Marshal(results)
-	if err != nil {
-		return fmt.Errorf("failed to marshal results: %w", err)
-	}
-
-	response := DBResponse{
-		Data:                   resultBytes,
-		ResponseDataTypeMarker: &action.ResponseDataType,
-	}
-
-	s.StoreResponse(procedureType, procedureID, &action.ResponseDataType, response)
-	return nil
-}
-
 // AccessFieldInResponseData accesses a specific field in the stored response data
 func (s *DBStore) AccessFieldInResponseData(procedureType string, procedureID int, responseDataTypeMarkerID string, accessPaths []string) (interface{}, error) {
 	response, err := s.GetResponse(procedureType, procedureID, responseDataTypeMarkerID)
@@ -127,18 +82,15 @@ func (s *DBStore) AccessFieldInResponseData(procedureType string, procedureID in
 		return nil, err
 	}
 
-	if response.ResponseDataTypeMarker.Type != "json" {
-		return nil, fmt.Errorf("unsupported response data type: %s", response.ResponseDataTypeMarker.Type)
+	if len(response.Elements) == 0 {
+		return nil, fmt.Errorf("no data found in response")
 	}
 
-	var jsonData map[string]interface{}
-	err = json.Unmarshal(response.Data, &jsonData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response data: %w", err)
-	}
+	// For now, we'll access the first element
+	element := response.Elements[0]
 
 	// Traverse the access path
-	var current interface{} = jsonData
+	var current interface{} = element
 	for i, path := range accessPaths {
 		obj, ok := current.(map[string]interface{})
 		if !ok {
@@ -173,12 +125,4 @@ func (s *DBStore) ClearGenerateResponses() {
 func (s *DBStore) ClearAllResponses() {
 	s.testResponses = make(map[string]DBResponse)
 	s.generateResponses = make(map[string]DBResponse)
-}
-
-// Close closes the database connection
-func (s *DBStore) Close() error {
-	if s.db != nil {
-		return s.db.Close()
-	}
-	return nil
 }
